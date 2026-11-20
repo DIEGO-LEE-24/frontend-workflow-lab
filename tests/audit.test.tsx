@@ -6,7 +6,7 @@ import { createDraft, issueNotice, markSeen, replyNotice, type Result } from '..
 import { loadSaved } from '../src/domain/migrate';
 import { seedState, type AppState } from '../src/domain/model';
 import { unreadCount, visibleFindings, visibleStatusCounts } from '../src/domain/selectors';
-import { createStore } from '../src/store/store';
+import { browserStorage, createStore } from '../src/store/store';
 import { App } from '../src/ui/App';
 
 afterEach(cleanup);
@@ -138,6 +138,18 @@ describe('defect 4: storage that throws on read stopped the app from starting', 
     expect(store.loaded).toMatchObject({ ok: false, reason: 'storage-unreadable' });
     expect(store.getState()).toEqual(seedState());
     expect(store.dispatch((s) => createDraft(s, 'p-inspector', ['f-1'])).ok).toBe(true);
+  });
+
+  it('also when merely touching window.localStorage throws (found by the browser check)', () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+    Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new Error('SecurityError'); } });
+    try {
+      const store = createStore(browserStorage());
+      expect(store.loaded).toMatchObject({ ok: false, reason: 'storage-unreadable' });
+      expect(store.dispatch((s) => createDraft(s, 'p-inspector', ['f-1'])).ok).toBe(true);
+    } finally {
+      if (original) Object.defineProperty(window, 'localStorage', original);
+    }
   });
 
   it('the screen opens', () => {

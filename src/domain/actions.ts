@@ -106,12 +106,15 @@ function recipient(s: AppState, by: string, noticeId: string): { n: Notice } | {
   return { n };
 }
 
+const seenBy = (n: Notice, by: string): boolean => n.events.some((e) => e.kind === 'seen' && e.by === by);
+
+/** Reading is recorded per person. A colleague may open a notice after the company has replied. */
 export function markSeen(s: AppState, by: string, noticeId: string): Result {
   const r = recipient(s, by, noticeId);
   if ('reason' in r) return refuse(s, r.reason);
   if (r.n.status === 'draft') return refuse(s, 'wrong-status');
   // Seeing the same notice twice is not a second event.
-  if (r.n.events.some((e) => e.kind === 'seen' && e.by === by)) return refuse(s, 'wrong-status');
+  if (seenBy(r.n, by)) return refuse(s, 'wrong-status');
   return accept(replaceNotice(s, withEvent(r.n, { at: s.clock, by, kind: 'seen' })));
 }
 
@@ -121,7 +124,10 @@ export function replyNotice(s: AppState, by: string, noticeId: string, text: str
   if (r.n.status !== 'issued') return refuse(s, 'wrong-status');
   const trimmed = text.trim();
   if (trimmed === '') return refuse(s, 'empty-input');
-  const replied = withEvent({ ...r.n, status: 'replied', reply: trimmed }, { at: s.clock, by, kind: 'replied' });
+  // Answering is per company and happens once. Whoever answers has necessarily read the notice,
+  // so that is recorded first; the history can never say "replied, then seen" for one person.
+  const read = seenBy(r.n, by) ? r.n : withEvent(r.n, { at: s.clock, by, kind: 'seen' });
+  const replied = withEvent({ ...read, status: 'replied', reply: trimmed }, { at: s.clock, by, kind: 'replied' });
   return accept(replaceNotice(s, replied));
 }
 

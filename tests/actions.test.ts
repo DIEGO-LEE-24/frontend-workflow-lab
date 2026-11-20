@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDraft, editFinding, issueNotice, markSeen, replyNotice, switchViewer, type Result } from '../src/domain/actions';
 import { seedState, type AppState } from '../src/domain/model';
-import { shownFindings, sourceChangedSinceIssue, statusCounts, unreadCount, visibleNotices } from '../src/domain/selectors';
+import { shownFindings, sourceChangedSinceIssue, unreadCount, visibleNotices, visibleStatusCounts } from '../src/domain/selectors';
 
 const INSPECTOR = 'p-inspector';
 const ALPHA = 'p-alpha';
@@ -144,8 +144,8 @@ describe('derived values', () => {
 
   it('status counts follow the notices', () => {
     const issued = issuedToAlpha();
-    expect(statusCounts(issued)).toEqual({ draft: 0, issued: 1, replied: 0 });
+    expect(visibleStatusCounts(issued, INSPECTOR)).toEqual({ draft: 0, issued: 1, replied: 0 });
     const replied = must(replyNotice(issued, ALPHA, 'n-3', 'ok'));
-    expect(statusCounts(replied)).toEqual({ draft: 0, issued: 0, replied: 1 });
+    expect(visibleStatusCounts(replied, INSPECTOR)).toEqual({ draft: 0, issued: 0, replied: 1 });
   });
 });

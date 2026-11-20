@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Result, Refusal } from '../domain/actions';
 import { loadSaved, type LoadResult } from '../domain/migrate';
-import type { AppState } from '../domain/model';
+import { seedState, type AppState } from '../domain/model';
 
 export interface Failure {
   readonly reason: Refusal;
@@ -31,8 +31,29 @@ export interface StorageLike {
   setItem(key: string, value: string): void;
 }
 
+/** The browser's storage, reached lazily. In a blocked context even touching `window.localStorage`
+ *  throws, so the property is read inside each call where the store already expects a failure. */
+export function browserStorage(): StorageLike {
+  return {
+    getItem: (key) => window.localStorage.getItem(key),
+    setItem: (key, value) => window.localStorage.setItem(key, value),
+  };
+}
+
+/** Storage can be blocked (private mode, site settings). Reading may throw, not only writing. */
+function readSaved(storage: StorageLike | null): LoadResult {
+  if (!storage) return loadSaved(null);
+  let text: string | null;
+  try {
+    text = storage.getItem(STORAGE_KEY);
+  } catch {
+    return { ok: false, state: seedState(), reason: 'storage-unreadable' };
+  }
+  return loadSaved(text);
+}
+
 export function createStore(storage: StorageLike | null): Store {
-  const loaded = loadSaved(storage ? storage.getItem(STORAGE_KEY) : null);
+  const loaded = readSaved(storage);
   let state = loaded.state;
   let failure: Failure | null = null;
   let failures = 0;

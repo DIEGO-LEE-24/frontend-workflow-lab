@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { createDraft } from '../src/domain/actions';
 import { createStore } from '../src/store/store';
 import { App } from '../src/ui/App';
 
@@ -33,28 +34,44 @@ describe('the screen', () => {
     click('회신', card());
     expect(card().textContent).toContain('회신: 치웠습니다');
     expect(card().textContent).toContain('발행(p-inspector) → 열람(p-alpha) → 회신(p-alpha)');
-    expect(screen.getByTestId('counts').textContent).toBe('초안 0 · 발행됨 0 · 회신됨 1');
+    expect(screen.getByTestId('counts').textContent).toBe('발행됨 0 · 회신됨 1');
   });
 
-  it('says why when a request is refused, instead of doing nothing', () => {
-    setup();
-    viewAs('알파 업체 담당');
-    pick('f-1');
-    click('고른 지적으로 통보 초안 만들기');
+  it('a request that is refused anyway (a stale screen, a direct call) says why', () => {
+    const store = setup();
+    act(() => void store.dispatch((s) => createDraft(s, 'p-alpha', ['f-1'])));
     expect(screen.getByRole('alert').textContent).toContain('이 역할로는 할 수 없는 일입니다.');
     expect(screen.getByTestId('counts').textContent).toBe('초안 0 · 발행됨 0 · 회신됨 0');
     click('닫기');
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('gives a different message for a different reason', () => {
+  it('says beforehand why a button cannot be pressed, with a different sentence per reason', () => {
     setup();
-    click('고른 지적으로 통보 초안 만들기');
-    expect(screen.getByRole('alert').textContent).toContain('내용이 비어 있습니다.');
+    const create = () => screen.getByRole('button', { name: '고른 지적으로 통보 초안 만들기' }) as HTMLButtonElement;
+    expect(create().disabled).toBe(true);
+    expect(document.getElementById('draft-why')?.textContent).toBe('지적을 하나 이상 고르세요.');
     pick('f-1');
+    expect(create().disabled).toBe(false);
     pick('f-3');
+    expect(create().disabled).toBe(true);
+    expect(document.getElementById('draft-why')?.textContent).toBe('서로 다른 업체의 지적은 한 통보에 묶을 수 없습니다.');
+  });
+
+  it('offers each person only the actions that person could ever take', () => {
+    setup();
+    pick('f-1');
     click('고른 지적으로 통보 초안 만들기');
-    expect(screen.getByRole('alert').textContent).toContain('서로 다른 업체의 지적은 한 통보에 묶을 수 없습니다.');
+    const card = () => screen.getByTestId('notice-n-3');
+    const names = () => within(card()).queryAllByRole('button').map((b) => b.textContent + ((b as HTMLButtonElement).disabled ? '(꺼짐)' : ''));
+    expect(names()).toEqual(['발행']);
+    click('발행', card());
+    expect(names()).toEqual(['발행(꺼짐)']);
+    viewAs('알파 업체 담당');
+    expect(names()).toEqual(['열람 확인', '회신(꺼짐)']);
+    expect(screen.queryByLabelText('f-1 고르기')).toBeNull();
+    viewAs('참관');
+    expect(names()).toEqual([]);
   });
 
   it('hides another company\'s notice and keeps the issued text after the finding is edited', () => {

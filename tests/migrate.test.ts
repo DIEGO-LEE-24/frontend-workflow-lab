@@ -43,11 +43,21 @@ describe('loading a save', () => {
     expect(r.state.clock).toBe(9);
   });
 
-  it('turns the old "seen" flag into an event, so the lifted notice is not unread again', () => {
+  it('turns the old "seen" flag into an event with no reader named, so the lifted notice is not unread again', () => {
     const r = loadSaved(JSON.stringify(v1Save()));
     if (!r.ok) throw new Error(r.reason);
-    expect(r.state.notices[0]?.events.map((e) => e.kind + ':' + e.by)).toEqual(['issued:p-inspector', 'seen:p-alpha']);
+    expect(r.state.notices[0]?.events.map((e) => e.kind + ':' + e.by)).toEqual(['issued:p-inspector', 'seen:null']);
     expect(unreadCount(r.state, 'p-alpha')).toBe(0);
+  });
+
+  it('carries an old reply over as text without making up who wrote it', () => {
+    const saved = v1Save();
+    (saved.notices[0] as { reply: string | null }).reply = '치웠습니다';
+    const r = loadSaved(JSON.stringify(saved));
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.state.notices[0]?.status).toBe('replied');
+    expect(r.state.notices[0]?.reply).toBe('치웠습니다');
+    expect(r.state.notices[0]?.events.some((e) => e.kind === 'replied')).toBe(false);
   });
 
   it('keeps the copy made at issue exactly as it was saved', () => {

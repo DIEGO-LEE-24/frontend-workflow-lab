@@ -27,9 +27,11 @@ export interface Snapshot {
 
 export type NoticeStatus = 'draft' | 'issued' | 'replied';
 
+/** `at` and `by` are null only for a record lifted from an older save that did not keep them.
+ *  Unknown stays unknown; nothing is filled in. */
 export interface NoticeEvent {
-  readonly at: number;
-  readonly by: string;
+  readonly at: number | null;
+  readonly by: string | null;
   readonly kind: 'issued' | 'seen' | 'replied';
 }
 
