@@ -32,6 +32,7 @@ li {
   margin: 4px 0;
 }
 li input:not([type]) {
+  box-sizing: border-box;
   width: min(100%, 420px);
 }
 article {

@@ -117,8 +117,8 @@ async function open(url) {
   throw new Error('page did not render: ' + url);
 }
 const viewport = (width, height, mobile) => page('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: mobile ? 2 : 1, mobile });
-async function shot(name) {
-  const { data } = await page('Page.captureScreenshot', { format: 'png' });
+async function shot(name, wholePage = false) {
+  const { data } = await page('Page.captureScreenshot', { format: 'png', captureBeyondViewport: wholePage });
   fs.writeFileSync(path.join(OUT, name), Buffer.from(data, 'base64'));
 }
 
@@ -139,6 +139,13 @@ const HELPERS = `
     },
     text: () => document.querySelector('main.app').innerText,
     overflow: () => document.documentElement.scrollWidth - window.innerWidth,
+    stickingOut: () => {
+      const column = document.querySelector('main.app').getBoundingClientRect();
+      const limit = column.right - parseFloat(getComputedStyle(document.querySelector('main.app')).paddingRight) + 0.5;
+      return [...document.querySelectorAll('main.app input, main.app button, main.app article, main.app fieldset')]
+        .filter((e) => e.getBoundingClientRect().right > limit)
+        .map((e) => e.getAttribute('aria-label') ?? e.tagName.toLowerCase());
+    },
   };
   true`;
 
@@ -197,7 +204,15 @@ try {
   await evaluate(HELPERS);
   const overflow = await evaluate('__t.overflow()');
   expect('no horizontal overflow at 390px', overflow <= 0, 'overflow ' + overflow + 'px');
-  await shot('4-inspector-390.png');
+  const sticking = await evaluate('__t.stickingOut()');
+  expect('no field sticks out of the page column at 390px', sticking.length === 0, sticking.join(', '));
+  // The same state, as three people see it
+  await shot('4-inspector-390.png', true);
+  await evaluate('__t.click(__t.radio("알파 업체 담당"))');
+  await shot('5-recipient-390.png', true);
+  await evaluate('__t.click(__t.radio("베타 업체 담당"))');
+  await shot('6-other-company-390.png', true);
+  await evaluate('__t.click(__t.radio("점검 담당"))');
   await viewport(1280, 800, false);
 
   // 4. A broken save in storage: the page opens from the seed and says why

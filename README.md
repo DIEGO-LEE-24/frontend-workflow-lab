@@ -7,7 +7,7 @@
 > buttons. A notice keeps a copy of what was issued. Screens subscribe with selectors. A saved state is
 > fully validated before use, and an older shape is lifted without inventing data it never had.
 > It runs in one browser with a role switcher; there is no server and no real delivery between people.
-> 65 unit tests and a 23-step check in a real headless Chrome.
+> 65 unit tests and a 24-step check in a real headless Chrome.
 
 한 사람이 통보를 발행하고 다른 사람이 열람하고 회신하는 흐름을, 화면 쪽에서 어떻게 틀리지 않게 만들 것인가를 다룬 작은 예제입니다.
 
@@ -22,7 +22,7 @@ npm install
 npm run dev      # 화면
 npm test         # 단위 시험 65개
 npm run build    # 형 검사 + 빌드
-npm run e2e      # 실제 Chrome으로 23단계 검사 (빌드 뒤에)
+npm run e2e      # 실제 Chrome으로 24단계 검사 (빌드 뒤에)
 ```
 
 ## 규칙
@@ -96,7 +96,7 @@ type Result =
 | `tests/ui.test.tsx` | 5 | 화면을 눌러 끝까지 가는 흐름 · 누르기 전에 까닭 표시 · 사람마다 다른 단추 |
 | `tests/render.test.tsx` | 2 | 다시 그리는 횟수 |
 | `tests/audit.test.tsx` | 17 | 아래 "검토에서 찾은 결함"의 회귀 시험 |
-| `e2e/run.mjs` | 23 | 실제 Chrome에서 세 사람의 흐름 · 새로고침 · 390px 폭에서 가로 넘침 없음 · 깨진 저장본 · 막힌 저장소 · 페이지 오류 0 |
+| `e2e/run.mjs` | 24 | 실제 Chrome에서 세 사람의 흐름 · 새로고침 · 390px 폭에서 가로 넘침과 삐져나온 칸 없음 · 깨진 저장본 · 막힌 저장소 · 페이지 오류 0 |
 
 브라우저 검사는 의존성을 더하지 않고, 설치된 Chrome을 띄워 개발자 도구 프로토콜로 직접 구동합니다.
 
@@ -120,7 +120,7 @@ type Result =
 | 한 사람의 이력이 "발행 → 회신 → 열람"이 됨 | 열람과 회신의 관계를 정하지 않음 | 회신이 열람을 먼저 기록하게 함 |
 | 동료가 회신하면 아직 열지 않은 사람의 읽지 않은 통보가 0이 됨 | 읽지 않음을 통보의 상태로 계산함 | 사람마다의 열람 기록으로 계산함 |
 
-고친 뒤 실제 Chrome으로 검사하다가 하나를 더 찾았습니다. 저장소가 막힌 브라우저에서는 `getItem`을 부르기 전에 `window.localStorage`에 손을 대는 순간 예외가 나는데, 단위 시험은 `getItem`이 던지는 경우만 흉내 냈습니다. 저장소에 손을 대는 일을 호출 안으로 옮기고 그 경우를 시험에 넣었습니다.
+고친 뒤 실제 Chrome으로 검사하다가 하나를 더 찾았습니다. 저장소가 막힌 브라우저에서는 `getItem`을 부르기 전에 `window.localStorage`에 손을 대는 순간 예외가 나는데, 단위 시험은 `getItem`이 던지는 경우만 흉내 냈습니다. 저장소에 손을 대는 일을 호출 안으로 옮기고 그 경우를 시험에 넣었습니다. 또 휴대폰 폭에서 입력 칸이 본문 단보다 오른쪽으로 삐져나오는 것을 화면 캡처에서 보고, 그것을 재는 검사를 먼저 실패시킨 뒤 고쳤습니다.
 
 이 일에서 얻은 것은 "시험이 통과한다"와 "규칙이 옳다"가 다른 말이라는 것입니다. 첫 판의 시험은 제가 생각한 경우만 확인했습니다.
 
