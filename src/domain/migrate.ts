@@ -86,6 +86,8 @@ function asNotice(v: unknown, personIds: ReadonlySet<string>, companyIds: Readon
   if ((status === 'replied') !== (reply !== null)) return null;
   if (status === 'draft' && events.length > 0) return null;
   if (snapshot && snapshot.findings.some((f) => f.companyId !== v['companyId'])) return null;
+  // The copy holds exactly the findings the notice names: the same ids, each once.
+  if (snapshot && (snapshot.findings.length !== findingIds.length || !snapshot.findings.every((f) => findingIds.includes(f.id)) || !unique(snapshot.findings.map((f) => f.id)))) return null;
   return { id: v['id'], companyId: v['companyId'], findingIds, status, snapshot, reply, events };
 }
 

@@ -82,6 +82,10 @@ describe('defect 2: a save with a missing nested field was accepted and broke th
     expect(loadSaved(broken((s) => { notice0(s)['companyId'] = 'c-nowhere'; }))).toMatchObject({ ok: false });
     expect(loadSaved(broken((s) => { (notice0(s)['events'] as Array<Record<string, unknown>>)[0]!['by'] = 'ghost'; }))).toMatchObject({ ok: false });
     expect(loadSaved(broken((s) => { (s['notices'] as unknown[]).push(JSON.parse(JSON.stringify(notice0(s)))); }))).toMatchObject({ ok: false });
+    // The copy made at issue must hold exactly the findings the notice names (found in a later review).
+    const copied = (s: Record<string, unknown>) => (notice0(s)['snapshot'] as { findings: Array<Record<string, unknown>> }).findings;
+    expect(loadSaved(broken((s) => { copied(s)[0]!['id'] = 'f-other'; }))).toMatchObject({ ok: false, reason: 'broken-shape' });
+    expect(loadSaved(broken((s) => { copied(s).push({ ...copied(s)[0]!, id: 'f-extra' }); }))).toMatchObject({ ok: false, reason: 'broken-shape' });
   });
 
   it('the screen still opens, from the seed, with a broken save in storage', () => {
